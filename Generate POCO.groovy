@@ -24,21 +24,24 @@ FILES.chooseDirectoryAndSave("Choose directory", "Choose where to store generate
 }
 
 def generate(table, dir) {
-    def className = csharpName(table.getName())
+    def tableName = table.getName()
+    def className = csharpName(tableName)
     def fields = calcFields(table)
-    new File(dir, className + ".cs").withPrintWriter { out -> generate(out, className, fields) }
+    new File(dir, className + ".cs").withPrintWriter { out -> generate(out, tableName, fields) }
 }
 
-def generate(out, className, fields) {
+def generate(out, tableName, fields) {
     out.println "using System;"
+    out.println "using System.ComponentModel.DataAnnotations.Schema;"
     out.println ""
-    out.println "public class $className"
+    out.println "[Table(\"${tableName}\")]"
+    out.println "public class ${csharpName(tableName)}"
     out.println "{"
 
     fields.each() {
         out.println ""
-        out.println "    public ${it.type} ${it.name} { get; set; }"
-        out.println ""
+        out.println "    [Column(\"${it.name}\")]"
+        out.println "    public ${it.type} ${csharpName(it.name)} { get; set; }"
     }
     out.println "}"
 }
@@ -49,7 +52,7 @@ def calcFields(table) {
         def typeStr = typeMapping.find { p, t -> p.matcher(spec).find() }?.value ?: "string"
         def nullable = col.isNotNull() || typeStr in notNullableTypes ? "" : "?"
         fields += [[
-                           name : csharpName(col.getName()),
+                           name : col.getName(),
                            type : typeStr + nullable]]
     }
 }
@@ -58,4 +61,5 @@ def csharpName(str) {
     com.intellij.psi.codeStyle.NameUtil.splitNameIntoWords(str)
             .collect { Case.LOWER.apply(it).capitalize() }
             .join("")
+            .replaceAll('\\$','_')
 }
